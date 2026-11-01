@@ -1,85 +1,114 @@
 # GreenPlace — Energy-Efficient SDN Controller Placement
 
-GreenPlace is a research prototype for energy-efficient Software-Defined Networking (SDN) controller placement under hard delay constraints. It combines offline multi-objective controller placement with a runtime manager that can put controllers to sleep or wake them as network traffic changes.
+GreenPlace is a research prototype for energy-efficient Software-Defined Networking (SDN) controller placement under hard delay constraints. It combines an offline multi-objective placement search with a runtime manager that can put controllers to sleep or wake them as network traffic changes.
 
-This repository upload contains the Python implementation archive and three standalone HTML demonstrations.
+The project studies the trade-offs between controller power, switch-to-controller delay, and the cost of future switch migrations.
 
 ## Repository contents
 
 | File | Description |
 |---|---|
-| `greenplace_python_mvp.zip` | Compressed Python project bundle. It contains the implementation, scripts, tests, experiment outputs, and supporting project files. Extract this archive to access the source project. |
-| `GreenPlace_Demo_Dashboard.html` | Interactive dashboard for exploring the GreenPlace study and its results. |
+| `greenplace_python_mvp_emulation_v2.zip` | Updated Python project bundle. Include the implementation, scripts, tests, Mininet/Ryu emulation package, experiment outputs, and supporting project files. |
+| `GreenPlace_Demo_Dashboard.html` | Standalone dashboard for exploring the GreenPlace study and results. |
 | `GreenPlace_Running_Animation.html` | Browser-based animation illustrating controller sleep/wake behaviour and switch migration. |
 | `GreenPlace_Tested_Networks_Gallery.html` | Gallery of the network topologies used in the study. |
 
-> **Note:** The Python source files are inside `greenplace_python_mvp.zip`; they are not individually listed at the repository root. The HTML files are provided separately for convenient viewing.
+The Python source files are provided inside the ZIP archive. The three HTML demonstrations remain standalone files and can be opened directly in a modern browser; they do not require the Python environment.
 
 ## Framework overview
 
 GreenPlace has two main phases:
 
-1. **Offline placement:** Searches for controller placements while considering power consumption, worst-case switch-to-controller delay, and an estimate of future switch-migration burden. The implementation includes an exact optimization baseline and a multi-objective NSGA-II approach.
+1. **Offline placement:** Searches for controller placements while considering modeled power consumption, worst-case switch-to-controller delay, and an estimate of future switch-migration burden. The implementation includes an exact optimization baseline and a multi-objective NSGA-II approach.
 2. **Runtime management:** Adjusts the active controller set as traffic changes. It uses smoothed traffic measurements, a minimum dwell time between sleep decisions, and delay- and capacity-aware switch reassignment.
 
-The project evaluates the trade-offs between modeled power consumption, delay, and switch migrations. The reported experiments use network topology data and simulated traffic traces; they should not be interpreted as physical hardware or live-network measurements.
+## Research evaluation
 
-## Viewing the demonstrations
+### Simulation study
 
-Download or clone this repository, then open any of the three `.html` files in a modern web browser. They are standalone demonstration pages and do not require a Python environment.
+The main study evaluates 46 real Topology Zoo networks using multiple random seeds and eight traffic scenarios, including two real traffic traces. The placement comparisons, modeled power results, and migration-count comparisons are produced by the GreenPlace simulation framework.
 
-- Open `GreenPlace_Demo_Dashboard.html` to explore the results dashboard.
+These results are simulation results. They are not measurements from a deployed production network or physical SDN hardware.
+
+### Mininet emulation
+
+A separate Mininet/Open vSwitch/Ryu emulation replays the runtime manager's schedules on a single Ubuntu laptop. It covers the Abilene and NSFNET topologies, four traffic traces, and two switch hand-over procedures:
+
+- Break-before-make (BBM)
+- Make-before-break (MBB)
+
+The recorded laptop emulation completed 16 runs. All 212 scheduled migrations were executed and verified, and all 1,536 emulation steps passed their consistency checks.
+
+Key observations from this emulation:
+
+- Median switch hand-over readiness was approximately 14.5–16.7 ms.
+- New-flow loss during hand-over was 10.7–15.7% with BBM and 1.9–2.6% with MBB.
+- No established-flow packets were lost during migration windows.
+- One approximately 485 ms host-wide transit pause affected three established streams outside the migration windows; this is reported as an observed host/network anomaly, not attributed to migration.
+- The emulation used software switches and controllers on one laptop. The OpenFlow control channel used loopback, so control-path propagation delay was not measured.
+- Whole-host RAPL energy counters were available, but no per-controller or per-switch power measurement was made.
+
+The emulation replays schedules generated by the simulator. It measures the operational cost of migrations in this emulated setup; it does not independently validate the placement algorithm's migration-count advantage.
+
+## Viewing the HTML demonstrations
+
+Download or clone this repository, then open any of the three `.html` files in a modern web browser.
+
+- Open `GreenPlace_Demo_Dashboard.html` to explore the study dashboard.
 - Open `GreenPlace_Running_Animation.html` to view the runtime animation.
 - Open `GreenPlace_Tested_Networks_Gallery.html` to browse the tested network topologies.
 
-GitHub may display an HTML file as source code rather than rendering it as a webpage. If that happens, download the file and open it locally in your browser.
+If GitHub displays an HTML file as source code rather than rendering it, download the file and open it locally in your browser.
 
 ## Running the Python project
 
-1. Download `greenplace_python_mvp.zip` from this repository.
-2. Extract the archive.
-3. Open a terminal in the extracted `greenplace_mvp` project directory (the directory containing `README.md`, `requirements.txt`, and `demo.py`).
-4. Create and activate a virtual environment:
+1. Download and extract `greenplace_python_mvp_emulation_v2.zip`.
+2. Open a terminal in the extracted project directory containing `README.md`, `requirements.txt`, and `demo.py`.
+3. Create and activate a virtual environment.
 
-   **Linux / macOS**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
+**Linux / macOS**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-   **Windows PowerShell**
-   ```powershell
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   ```
+**Windows PowerShell**
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
 
-5. Install the dependencies:
-   ```bash
-   python -m pip install -r requirements.txt
-   ```
+4. Install the Python dependencies:
+```bash
+python -m pip install -r requirements.txt
+```
 
-6. Run the quick demonstration:
-   ```bash
-   python demo.py --quick
-   ```
+5. Run the quick demonstration:
+```bash
+python demo.py --quick
+```
 
-For the full setup instructions, additional experiment commands, and testing guidance, refer to the `README.md` and `BENCHMARKING.md` files inside the extracted Python project.
+For full experiment commands, testing instructions, and emulation-specific setup requirements, refer to the documentation inside the extracted project archive. Mininet emulation requires a supported Linux environment, Open vSwitch, Mininet, and the required Ryu environment; it is not a Windows-only demonstration.
 
 ## Research scope and limitations
 
-- The study evaluates 46 Topology Zoo networks, multiple random seeds, and eight traffic scenarios, including two real traffic traces.
-- The reported power values come from the project's modeled power formulation and simulation setup.
-- The runtime migration counts are simulation results, not measurements from a deployed SDN testbed.
-- GreenPlace is not claimed to be the best static energy-placement method. Its main research focus is the interaction between placement-time migration awareness and runtime controller management.
-- The exact optimization baseline and heuristic methods use the formulations and evaluation procedures documented in the accompanying source project and research report.
+- The main placement and migration-count comparisons are simulation results.
+- The Mininet results are software-based emulation on one laptop, not a physical hardware testbed.
+- The emulation uses a loopback OpenFlow control channel, so control-path propagation delay is excluded.
+- The emulation replays the simulator's migration schedule; it does not independently establish that GreenPlace requires fewer migrations than competing placement methods.
+- No per-controller or per-switch power was measured. Whole-host RAPL readings must not be interpreted as controller-specific energy.
+- GreenPlace is not claimed to be the best static energy-placement method. Its research focus is the interaction between placement-time migration awareness and runtime controller management.
+- Competing methods are re-implementations of published approaches; they are not the original authors' implementations.
 
-Please consult the research report and experiment summaries included inside the Python archive for detailed methodology, numerical results, and qualifications.
+Consult the research report and experiment summaries in the project archive for the full methodology, numerical results, and qualifications.
 
-## Reproducibility
+## Reproducibility and data
 
-The Python archive includes the project code and supporting experiment material. Refer to its internal documentation for the exact commands, dependencies, and details needed to reproduce individual experiments.
+The updated project archive should include the source code, tests, emulation implementation, and the raw output files for emulation session `20261101_145257` (including its per-run results and summaries). Keep the session outputs together with the emulation package so that the reported results can be inspected.
+
+The repository should contain the updated archive rather than the earlier bundle with the untested emulation harness. If any additional analysis outputs are not included in the archive, identify that clearly rather than implying that they are publicly available.
 
 ## Authors
 
-Sivaseelan S and Giridharan S  
+**Sivaseelan S and Giridharan S**  
 Computer Science, Vellore Institute of Technology (VIT), Vellore, India.
